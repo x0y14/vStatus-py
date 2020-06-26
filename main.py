@@ -1,6 +1,7 @@
 from wrapper import Wrapper
 from wrapper import IchikaraFormat
 import json
+from pprint import pprint
 
 
 wrapper = Wrapper()
@@ -10,8 +11,11 @@ wrapper = Wrapper()
 # 	print(event)
 
 result = wrapper.getHololiveSchedule()
-# print(result[0])
-# for tu in result:
+# print(result)
+for tu in result:
+	# print(tu.streamerName)
+	print()
+	pprint(tu)
 # 	print("\n\n\n\n\n\n\n\n-----------------------------------------")
 # 	print('[containaer]\n')
 # 	print(tu.encode('utf-8'))

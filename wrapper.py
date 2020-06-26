@@ -10,7 +10,6 @@ from typing import List
 import dataclasses
 from dataclasses_json import dataclass_json
 
-from pprint import pprint
 
 from datetime import datetime, timezone
 
@@ -29,6 +28,17 @@ class IchikaraFormat:
 	recommend: bool
 	genre: dict
 	livers: List[dict]
+
+@dataclasses.dataclass
+class HoloFormat:
+	streamerName: str
+	streamerIconUrl: str
+	streamerColor: str
+	streamUrl: str
+	streamStartTime: str
+	streamThumbnailUrl: str
+	isNowStreaming: bool
+
 
 
 class Wrapper:
@@ -80,7 +90,15 @@ class Wrapper:
 
 		# we have containers
 		# next step, container kaiseki
-		events = []
+		eventsSchedule = []
+
+		st_name = ''
+		st_icon = ''
+		st_color = ''
+		st_url = ''
+		st_time = ''
+		st_thum = ''
+		st_now = False
 
 
 		for container in base_dom_clear:
@@ -92,21 +110,20 @@ class Wrapper:
 				if container_divs.find('div', attrs={"class": "navbar navbar-inverse"}) != None:
 					# print(container_divs)
 					dateJapanese = container_divs.text.replace('\n','').replace("\r", "").replace(" ", '').encode('utf-8').decode('utf-8')
-					print(f'----------[{dateJapanese}]----------')
+					# print(f'----------[{dateJapanese}]----------')
 					dateMD = re.search(r'([0-9]+)/([0-9]+)', dateJapanese)
 					streamMan = str(dateMD.group(1))# 06
 					streamD = str(dateMD.group(2))# 26
 					now = datetime.now().astimezone()
 					streamY = now.year
-# sch = datetime(now.year, int('06'), int('25'), int('00'), int('00')).astimezone()
-				# print('\n\n\n-----[container]-----')
 				else:
 					for thumneil in container_divs.div:
 						# print(thumneil)
 						try:
 							event = thumneil.a
 							if 'red' in str(event.get('style')):
-								print('[Streamming]')
+								# print('[Streamming]')
+								st_now = True
 							stream_url = event.get("href")
 							# print(f'[streamLink]: {stream_url}')
 							# event = thumneil.a
@@ -123,8 +140,10 @@ class Wrapper:
 										# print(dateAndName)
 										reg = re.match(r'([0-9]+\:[0-9]+)([a-zA-Zぁ-龥]+)', dateAndName)
 										streamer = reg.group(2)# 常闇トワ
-										print(f'[streamer]: {streamer}')
-										print(f'[streamLink]: {stream_url}')
+										# print(f'[streamer]: {streamer}')
+										st_name = str(streamer)
+										# print(f'[streamLink]: {stream_url}')
+										st_url = str(stream_url)
 
 										# streamT = reg.group(1)# 11:00
 										streamHM = re.match(r'([0-9]+)\:([0-9]+)', str(reg.group(1)))
@@ -132,7 +151,8 @@ class Wrapper:
 										streamH = streamHM.group(1)
 										streamM = streamHM.group(2)
 										streamEventTime = datetime(int(streamY), int(streamMan), int(streamD), int(streamH), int(streamM)).astimezone()
-										print(f"[streamEventTime]: {streamEventTime.isoformat()}")
+										# print(f"[streamEventTime]: {streamEventTime.isoformat()}")
+										st_time = streamEventTime.isoformat()
 
 										# print(f'date: {reg.group(1)}, who: {reg.group(2)}')
 									except Exception as e:
@@ -142,16 +162,38 @@ class Wrapper:
 											img = divs.img.get('src')# images
 											style = divs.img.get('style')
 											if 'mqdefault' in str(img):
-												print(f"[streamThumbnail]: {img}")
+												# print(f"[streamThumbnail]: {img}")
+												st_thum = img
 											# else:
 											elif 'https://yt3.ggpht.com' in str(img):
-												print(f"[streamerIcon]: {img}")
+												# print(f"[streamerIcon]: {img}")
+												st_icon = img
 												# print(str(img_style))
 												# vColor = re.match(r"(\#[a-zA-Z0-9]+)", str(img_style))
 												# img_style = divs.img.get('style')
 												vColor = re.search(r"(\#[a-zA-Z0-9]+)", str(style))
-												print(f'[streamerColor]: {vColor.group(1)}')
-												print('----------------------------------------------------------------------------------------------------')
+												# print(f'[streamerColor]: {vColor.group(1)}')
+												st_color = vColor.group(1)
+												sch = HoloFormat(
+													streamerName=st_name,
+													streamerIconUrl=st_icon,
+													streamerColor=st_color,
+													streamUrl=st_url,
+													streamStartTime=st_time,
+													streamThumbnailUrl=st_thum,
+													isNowStreaming=st_now
+												)
+												eventsSchedule.append(sch)
+												st_name = ''
+												st_icon = ''
+												st_color = ''
+												st_url = ''
+												st_time = ''
+												st_thum = ''
+												st_now = False
+												# print('----------------------------------------------------------------------------------------------------')
+												# print(events)
+												# sch = HoloFormat()
 											else:
 												print(img)
 										except Exception as e:
@@ -164,9 +206,7 @@ class Wrapper:
 							pass
 							# print(thumneil)
 							# コンテナーがない、ゴミ
-
-		
-		return base_dom_clear
+		return eventsSchedule
 
 
 	def getHololiveSchedule(self):
@@ -191,7 +231,6 @@ class Wrapper:
 			raise Exception("dom parse error")
 
 		result = self._holoParse(mainDOM)
-
 		# containers = mainDOM.div.div.div.div
 		# contList = []
 		# for cont in containers:
@@ -199,5 +238,4 @@ class Wrapper:
 		# 		continue
 		# 	else:
 		# 		contList.append(cont)
-		# return contList
 		return result
