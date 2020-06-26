@@ -6,20 +6,28 @@ import tempfile
 import os
 
 app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False
+
 wrapper = Wrapper()
 
 if os.path.exists('/tmp/vSchedule.json') == False:
-	with open('/tmp/vSchedule.json', 'w') as f:
-		ichikaraSchedule = wrapper.getIchikaraSchedule()
-		ichikaraCommon = wrapper.changeIchikaraFormatToCommon(ichikaraSchedule)
-		hololiveSchedule = wrapper.getHololiveSchedule()
-		hololiveCommon = wrapper.changeHoloduleFormatToCommon(hololiveSchedule)
-
-		vSchedule = wrapper.integrationCommonSchedules(hololiveCommon=hololiveCommon, ichikaraCommon=ichikaraCommon)
-		# with tempfile.TemporaryDirectory() as temp_path:
-		# write_path = '/tmp' + '/vSchedule.json'
+	try:
 		with open('/tmp/vSchedule.json', 'w') as f:
-			json.dump(vSchedule, f, ensure_ascii=False, encode='utf-8')
+			ichikaraSchedule = wrapper.getIchikaraSchedule()
+			ichikaraCommon = wrapper.changeIchikaraFormatToCommon(ichikaraSchedule)
+			hololiveSchedule = wrapper.getHololiveSchedule()
+			hololiveCommon = wrapper.changeHoloduleFormatToCommon(hololiveSchedule)
+
+			vSchedule = wrapper.integrationCommonSchedules(hololiveCommon=hololiveCommon, ichikaraCommon=ichikaraCommon)
+			with open('/tmp/vSchedule.json', 'w', encoding='utf-8') as f:
+				json.dump(vSchedule, f, ensure_ascii=False)
+	except Exception as e:
+		print(e)
+
+
+@app.route('/')
+def index():
+	return jsonify({'version': 'v0.1'}), 200
 
 
 @app.route("/api/private/getScheduleData", methods=['GET'])
@@ -32,8 +40,8 @@ def getSchedule():
 	vSchedule = wrapper.integrationCommonSchedules(hololiveCommon=hololiveCommon, ichikaraCommon=ichikaraCommon)
 	# with tempfile.TemporaryDirectory() as temp_path:
 	# write_path = '/tmp' + '/vSchedule.json'
-	with open('/tmp/vSchedule.json', 'w') as f:
-		json.dump(vSchedule, f, ensure_ascii=False, encode='utf-8')
+	with open('/tmp/vSchedule.json', 'w', encoding='utf-8') as f:
+		json.dump(vSchedule, f, ensure_ascii=False)
 	return jsonify({'status': 'ok'}), 200
 
 
@@ -48,6 +56,5 @@ def getNowStreaming(time=None):
 	else:
 		return jsonify({}), 404
 
-if __name__ == "__main__":
-	app.run()
-
+if __name__ == '__main__':
+	app.run(host='0.0.0.0')

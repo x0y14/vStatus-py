@@ -1,4 +1,4 @@
 # vState-py  
 ## バーチャルYoutuberのスケジュールをHPから取得してくるモノ。  
-### google Cloud Functionsで動かします。
+### google App Engineで動かします。
 ### Swiftで開発するアプリ用(公開するかはわからない)です。  
