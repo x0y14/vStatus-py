@@ -1,17 +1,17 @@
-import requests
 import json
 import re
-
-from bs4 import BeautifulSoup
-
+from datetime import datetime, timezone, timedelta
+import urllib.parse
+import time
 import typing
 from typing import List
 
+
+from bs4 import BeautifulSoup
+import requests
+
 import dataclasses
 from dataclasses_json import dataclass_json
-
-
-from datetime import datetime, timezone
 
 
 @dataclass_json
@@ -26,9 +26,10 @@ class IchikaraFormat:
 	start_date: str
 	end_date: str
 	recommend: bool
-	genre: dict
+	# genre: dict
 	livers: List[dict]
 
+@dataclass_json
 @dataclasses.dataclass
 class HoloFormat:
 	streamerName: str
@@ -39,6 +40,23 @@ class HoloFormat:
 	streamThumbnailUrl: str
 	isNowStreaming: bool
 
+@dataclass_json
+@dataclasses.dataclass
+class CommonScheduleFormat:
+	streamerName: str
+	streamerIconUrl: str
+	streamerColor: str
+
+	streamUrl: str
+	title: str
+	thumbnail: str
+	startTime: str
+	endTime: str
+	isNowStream: bool
+
+	startEpoch: float
+	endEpoch: float
+	org: str
 
 
 class Wrapper:
@@ -57,7 +75,13 @@ class Wrapper:
 		if result.json()['data'].get("events") == None:
 				raise Exception("return json does not have key of events")
 
-		return result.json()['data']['events']
+		# return result.json()['data']['events']
+		# result = wrapper.getIchikaraSchedule()
+		streamEvent = []
+		for events in result.json()['data']['events']:
+			del events['genre']
+			streamEvent.append(IchikaraFormat.from_json(json.dumps(events)))
+		return streamEvent
 	
 
 	def _holoParse(self, mainDOM):
@@ -231,11 +255,122 @@ class Wrapper:
 			raise Exception("dom parse error")
 
 		result = self._holoParse(mainDOM)
-		# containers = mainDOM.div.div.div.div
-		# contList = []
-		# for cont in containers:
-		# 	if (cont == '\n') or (cont == ''):
-		# 		continue
-		# 	else:
-		# 		contList.append(cont)
 		return result
+	
+
+	def getStreamTitleFromURL(self, youtube_stream_url):
+		params = {"format": "json", "url": youtube_stream_url}
+		url = "https://www.youtube.com/oembed"
+		query_string = urllib.parse.urlencode(params)
+		url = url + "?" + query_string
+		time.sleep(0.2)
+		result = requests.get(url)
+		# print(result.json())
+		if result.status_code == 200:
+			return str(result.json()['title'])
+		else:
+			return ''
+
+		# with urllib.request.urlopen(url) as response:
+		# 	response_text = response.read()
+		# 	data = json.loads(response_text.decode())
+		# 	print(data['title'])
+
+	
+	def changeIchikaraFormatToCommon(self, ichikaraSchedule:list) -> list:
+		commonedSchedule = []
+		for events in ichikaraSchedule:
+			# for isNowStream
+			start = datetime.fromisoformat(events.start_date)
+			end = datetime.fromisoformat(events.end_date)
+			now = datetime.now()
+			endEpoch = end.timestamp()
+
+			if start.timestamp() < now.timestamp() < end.timestamp():
+				isStreaming = True
+			else:
+				isStreaming = False
+
+			# ライバー最初の一人しか取得してない。
+			# アプリで複数表示する場合はここを変えればいいんじゃないかな
+			ev = CommonScheduleFormat(
+				streamerName = events.livers[0]['name'],
+				streamerIconUrl = events.livers[0]['avatar'],
+				streamerColor = events.livers[0]['color'],
+				streamUrl = events.url,
+				title = events.name,
+				thumbnail = events.thumbnail,
+				startTime = events.start_date,
+				endTime = events.end_date,
+				isNowStream = isStreaming,
+				startEpoch = start.timestamp(),
+				endEpoch = endEpoch,
+				org = 'ichikara'
+			)
+			commonedSchedule.append(ev)
+		return commonedSchedule
+
+
+	def changeHoloduleFormatToCommon(self, hololiveSchedule: list) -> list:
+		# @dataclasses.dataclass
+		# class CommonScheduleFormat:
+		# 	streamerName: str
+		# 	streamerIconUrl: str
+		# 	streamerColor: str
+
+		# 	streamUrl: str
+		# 	title: str
+		# 	thumbnail: str
+		# 	startTime: str
+		# 	endTime: str
+		# 	isNowStream: bool
+		commonSchedule = []
+		for events in hololiveSchedule:
+			end = datetime.fromisoformat(events.streamStartTime)
+			endEpoch = end.timestamp()
+			end += timedelta(hours=2)# hololiveは終了時間書いてないので、適当に2時間にしてる
+			start = datetime.fromisoformat(events.streamStartTime)
+
+			ev = CommonScheduleFormat(
+				streamerName = events.streamerName,
+				streamerIconUrl = events.streamerIconUrl,
+				streamerColor = events.streamerColor,
+				streamUrl = events.streamUrl,
+				title = self.getStreamTitleFromURL(events.streamUrl),
+				thumbnail = events.streamThumbnailUrl,
+				startTime = events.streamStartTime,
+				endTime = end.isoformat(),
+				isNowStream = events.isNowStreaming,
+				startEpoch = start.timestamp(),
+				endEpoch = endEpoch,
+				org = 'hololive'
+			)
+			commonSchedule.append(ev)
+		return commonSchedule
+
+
+	def integrationCommonSchedules(self, ichikaraCommon:list, hololiveCommon:list):
+		masterSchedule = []
+		masterSchedule.extend(ichikaraCommon)
+		masterSchedule.extend(hololiveCommon)
+
+		sortedSchedule = sorted(masterSchedule, key=lambda x: x.startEpoch)
+		nowEpoch = datetime.now().timestamp()
+		streamSchedule = {
+			'past': [],
+			'now': [],
+			'future': []}
+		for streamEvent in sortedSchedule:
+			# if streamEvent
+			if streamEvent.startEpoch < nowEpoch < streamEvent.endEpoch:
+				# 配信中
+				streamSchedule['now'].append(streamEvent)
+			elif streamEvent.endEpoch < nowEpoch:
+				# 配信済み
+				streamSchedule['past'].append(streamEvent)
+			elif nowEpoch < streamEvent.startEpoch:
+				# 配信予定
+				streamSchedule['future'].append(streamEvent)
+			else:
+				print(streamEvent)
+		return streamSchedule

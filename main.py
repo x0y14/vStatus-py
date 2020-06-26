@@ -5,18 +5,11 @@ from pprint import pprint
 
 
 wrapper = Wrapper()
-# result = wrapper.getIchikaraSchedule()
-# for events in result:
-# 	event = IchikaraFormat.from_json(json.dumps(events))
-# 	print(event)
 
-result = wrapper.getHololiveSchedule()
-# print(result)
-for tu in result:
-	# print(tu.streamerName)
-	print()
-	pprint(tu)
-# 	print("\n\n\n\n\n\n\n\n-----------------------------------------")
-# 	print('[containaer]\n')
-# 	print(tu.encode('utf-8'))
-# print(len(result))
+ichikaraSchedule = wrapper.getIchikaraSchedule()
+ichikaraCommon = wrapper.changeIchikaraFormatToCommon(ichikaraSchedule)
+hololiveSchedule = wrapper.getHololiveSchedule()
+hololiveCommon = wrapper.changeHoloduleFormatToCommon(hololiveSchedule)
+
+schedule = wrapper.integrationCommonSchedules(hololiveCommon=hololiveCommon, ichikaraCommon=ichikaraCommon)
+pprint(schedule)
