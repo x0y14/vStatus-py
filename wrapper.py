@@ -362,15 +362,19 @@ class Wrapper:
 			'future': []}
 		for streamEvent in sortedSchedule:
 			# if streamEvent
+			streamJSON = json.loads(streamEvent.to_json(ensure_ascii=False))
+			del streamJSON['startEpoch']
+			del streamJSON['endEpoch']
+
 			if streamEvent.startEpoch < nowEpoch < streamEvent.endEpoch:
 				# 配信中
-				streamSchedule['now'].append(streamEvent)
+				streamSchedule['now'].append(json.dumps(streamJSON, ensure_ascii=False))
 			elif streamEvent.endEpoch < nowEpoch:
 				# 配信済み
-				streamSchedule['past'].append(streamEvent)
+				streamSchedule['past'].append(json.dumps(streamJSON, ensure_ascii=False))
 			elif nowEpoch < streamEvent.startEpoch:
 				# 配信予定
-				streamSchedule['future'].append(streamEvent)
+				streamSchedule['future'].append(json.dumps(streamJSON, ensure_ascii=False))
 			else:
-				print(streamEvent)
+				print(f"[unknown]:\n{streamEvent}")
 		return streamSchedule
