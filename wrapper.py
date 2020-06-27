@@ -370,6 +370,12 @@ class Wrapper:
 			streamJSON['id'] = _id
 			_id += 1
 
+			if '.000' in streamJSON['startTime']:
+				streamJSON['startTime'] = str(streamJSON['startTime']).replace('.000', '')
+
+			if '.000' in streamJSON['endTime']:
+				streamJSON['endTime'] = str(streamJSON['endTime']).replace('.000', '')
+
 			del streamJSON['startEpoch']
 			del streamJSON['endEpoch']
 
