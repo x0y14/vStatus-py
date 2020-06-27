@@ -1,7 +1,7 @@
 from wrapper import Wrapper
 from wrapper import IchikaraFormat
 import json
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import tempfile
 import os
 from datetime import datetime, timedelta, timezone
@@ -68,7 +68,15 @@ def getNowStreaming(time=None):
 		return jsonify({'err': str(e)}), 500
 
 	if time in ['past', 'now', 'future']:
-		return jsonify((vSchedule[time])), 200
+		if request.args.get('count') != None:
+			try:
+				count = int(request.args.get('count'))
+			except:
+				return jsonify((vSchedule[time])), 200
+
+			return jsonify((vSchedule[time][:count])), 200
+		else:
+			return jsonify((vSchedule[time])), 200
 	elif time == 'all':
 		return jsonify((vSchedule)), 200
 	else:
@@ -78,7 +86,6 @@ def getNowStreaming(time=None):
 def getLastUpdate():
 	try:
 		with open('/tmp/vSchedule.json', 'r', encoding='utf-8') as f:
-		# json_lines = [ json.loads(s) for s in responses if s != "" ]
 			vSchedule = json.loads(f.read())
 	except Exception as e:
 		return jsonify({'err': str(e)}), 500
