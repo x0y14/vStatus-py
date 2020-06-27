@@ -123,7 +123,7 @@ class Wrapper:
 		st_time = ''
 		st_thum = ''
 		st_now = False
-
+		JST = timezone(timedelta(hours=+9), 'JST')
 
 		for container in base_dom_clear:
 			# 大まかに区切られたものが入っているので、それをさらに掘り下げる。
@@ -138,7 +138,7 @@ class Wrapper:
 					dateMD = re.search(r'([0-9]+)/([0-9]+)', dateJapanese)
 					streamMan = str(dateMD.group(1))# 06
 					streamD = str(dateMD.group(2))# 26
-					now = datetime.now().astimezone()
+					now = datetime.now(JST).astimezone()
 					streamY = now.year
 				else:
 					for thumneil in container_divs.div:
@@ -278,12 +278,14 @@ class Wrapper:
 
 	
 	def changeIchikaraFormatToCommon(self, ichikaraSchedule:list) -> list:
+		JST = timezone(timedelta(hours=+9), 'JST')
+
 		commonedSchedule = []
 		for events in ichikaraSchedule:
 			# for isNowStream
 			start = datetime.fromisoformat(events.start_date)
 			end = datetime.fromisoformat(events.end_date)
-			now = datetime.now()
+			now = datetime.now(JST)
 			endEpoch = end.timestamp()
 
 			if start.timestamp() < now.timestamp() < end.timestamp():
@@ -350,31 +352,36 @@ class Wrapper:
 
 
 	def integrationCommonSchedules(self, ichikaraCommon:list, hololiveCommon:list):
+		JST = timezone(timedelta(hours=+9), 'JST')
 		masterSchedule = []
 		masterSchedule.extend(ichikaraCommon)
 		masterSchedule.extend(hololiveCommon)
 
 		sortedSchedule = sorted(masterSchedule, key=lambda x: x.startEpoch)
-		nowEpoch = datetime.now().timestamp()
+		nowEpoch = datetime.now(JST).timestamp()
 		streamSchedule = {
 			'past': [],
 			'now': [],
 			'future': []}
+		_id = 0
 		for streamEvent in sortedSchedule:
 			# if streamEvent
 			streamJSON = json.loads(streamEvent.to_json(ensure_ascii=False))
+			streamJSON['id'] = _id
+			_id += 1
+
 			del streamJSON['startEpoch']
 			del streamJSON['endEpoch']
 
 			if streamEvent.startEpoch < nowEpoch < streamEvent.endEpoch:
 				# 配信中
-				streamSchedule['now'].append(json.dumps(streamJSON, ensure_ascii=False))
+				streamSchedule['now'].append(streamJSON)
 			elif streamEvent.endEpoch < nowEpoch:
 				# 配信済み
-				streamSchedule['past'].append(json.dumps(streamJSON, ensure_ascii=False))
+				streamSchedule['past'].append(streamJSON)
 			elif nowEpoch < streamEvent.startEpoch:
 				# 配信予定
-				streamSchedule['future'].append(json.dumps(streamJSON, ensure_ascii=False))
+				streamSchedule['future'].append(streamJSON)
 			else:
 				print(f"[unknown]:\n{streamEvent}")
 		return streamSchedule

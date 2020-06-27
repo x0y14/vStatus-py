@@ -48,6 +48,8 @@ def getSchedule():
 	vSchedule = wrapper.integrationCommonSchedules(hololiveCommon=hololiveCommon, ichikaraCommon=ichikaraCommon)
 	vSchedule['lastUpdate'] = datetime.now(JST).isoformat()
 
+	# js = json.loads(vSchedule)
+
 	try:
 		with open('/tmp/vSchedule.json', 'w', encoding='utf-8') as f:
 			json.dump(vSchedule, f, ensure_ascii=False)
@@ -66,9 +68,9 @@ def getNowStreaming(time=None):
 		return jsonify({'err': str(e)}), 500
 
 	if time in ['past', 'now', 'future']:
-		return jsonify(vSchedule[time]), 200
+		return jsonify((vSchedule[time])), 200
 	elif time == 'all':
-		return jsonify(vSchedule), 200
+		return jsonify((vSchedule)), 200
 	else:
 		return jsonify({}), 404
 
