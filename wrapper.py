@@ -55,7 +55,7 @@ class CommonScheduleFormat:
 	isNowStream: bool
 
 	startEpoch: float
-	endEpoch: float
+	# endEpoch: float
 	org: str
 
 
@@ -286,7 +286,7 @@ class Wrapper:
 			start = datetime.fromisoformat(events.start_date)
 			end = datetime.fromisoformat(events.end_date)
 			now = datetime.now(JST)
-			endEpoch = end.timestamp()
+			# endEpoch = end.timestamp()
 
 			if start.timestamp() < now.timestamp() < end.timestamp():
 				isStreaming = True
@@ -306,7 +306,7 @@ class Wrapper:
 				endTime = events.end_date,
 				isNowStream = isStreaming,
 				startEpoch = start.timestamp(),
-				endEpoch = endEpoch,
+				# endEpoch = endEpoch,
 				org = 'ichikara'
 			)
 			commonedSchedule.append(ev)
@@ -329,7 +329,7 @@ class Wrapper:
 		commonSchedule = []
 		for events in hololiveSchedule:
 			end = datetime.fromisoformat(events.streamStartTime)
-			endEpoch = end.timestamp()
+			# endEpoch = end.timestamp()
 			end += timedelta(hours=2)# hololiveは終了時間書いてないので、適当に2時間にしてる
 			start = datetime.fromisoformat(events.streamStartTime)
 
@@ -344,7 +344,7 @@ class Wrapper:
 				endTime = end.isoformat(),
 				isNowStream = events.isNowStreaming,
 				startEpoch = start.timestamp(),
-				endEpoch = endEpoch,
+				# endEpoch = endEpoch,
 				org = 'hololive'
 			)
 			commonSchedule.append(ev)
@@ -352,13 +352,17 @@ class Wrapper:
 
 
 	def integrationCommonSchedules(self, ichikaraCommon:list, hololiveCommon:list):
+		# ソートに関して、timestampで比較してしまうと正しい振り分けにならないことを確認。
+		# datetimeでそのまま比較できるらしいのでそのようにする
+
 		JST = timezone(timedelta(hours=+9), 'JST')
 		masterSchedule = []
 		masterSchedule.extend(ichikaraCommon)
 		masterSchedule.extend(hololiveCommon)
 
 		sortedSchedule = sorted(masterSchedule, key=lambda x: x.startEpoch)
-		nowEpoch = datetime.now(JST).timestamp()
+		# nowEpoch = datetime.now(JST).timestamp()
+		now = datetime.now(JST)
 		streamSchedule = {
 			'past': [],
 			'now': [],
@@ -377,17 +381,19 @@ class Wrapper:
 				streamJSON['endTime'] = str(streamJSON['endTime']).replace('.000', '')
 
 			del streamJSON['startEpoch']
-			del streamJSON['endEpoch']
+			# del streamJSON['endEpoch']
 
-			if streamEvent.startEpoch < nowEpoch < streamEvent.endEpoch:
+			if datetime.fromisoformat(streamJSON['startTime']) < now < datetime.fromisoformat(streamJSON['endTime']):
 				# 配信中
 				streamSchedule['now'].append(streamJSON)
-			elif streamEvent.endEpoch < nowEpoch:
-				# 配信済み
-				streamSchedule['past'].append(streamJSON)
-			elif nowEpoch < streamEvent.startEpoch:
+
+			elif now < datetime.fromisoformat(streamJSON['startTime']):
 				# 配信予定
 				streamSchedule['future'].append(streamJSON)
+
+			elif datetime.fromisoformat(streamJSON['endTime']) < now:
+				# 配信済み
+				streamSchedule['past'].append(streamJSON)
 			else:
 				print(f"[unknown]:\n{streamEvent}")
 		return streamSchedule

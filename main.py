@@ -35,7 +35,7 @@ if os.path.exists('/tmp/vSchedule.json') == False:
 
 @app.route('/')
 def index():
-	return jsonify({'version': 'v0.1'}), 200
+	return jsonify({'version': 'v1.3'}), 200
 
 
 @app.route("/api/private/getScheduleData", methods=['GET'])
