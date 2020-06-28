@@ -56,6 +56,7 @@ class CommonScheduleFormat:
 
 	startEpoch: float
 	# endEpoch: float
+	embed: str
 	org: str
 
 
@@ -263,13 +264,21 @@ class Wrapper:
 		url = "https://www.youtube.com/oembed"
 		query_string = urllib.parse.urlencode(params)
 		url = url + "?" + query_string
-		time.sleep(0.2)
+		time.sleep(0.1)
 		result = requests.get(url)
 		# print(result.json())
+		# print(embbb)
+		try:
+			embbb = BeautifulSoup(result.json()['html'], features="html.parser")
+			embLink = embbb.iframe.get('src')
+		except:
+			embLink = ''
+		# print(eb_)
+		# print(result.json())
 		if result.status_code == 200:
-			return str(result.json()['title'])
+			return {'title': str(result.json()['title']), 'embed': embLink}
 		else:
-			return ''
+			return {'title': '', 'embed': ''}
 
 		# with urllib.request.urlopen(url) as response:
 		# 	response_text = response.read()
@@ -295,17 +304,19 @@ class Wrapper:
 
 			# ライバー最初の一人しか取得してない。
 			# アプリで複数表示する場合はここを変えればいいんじゃないかな
+			youtubeData = self.getStreamTitleFromURL(events.url)
 			ev = CommonScheduleFormat(
 				streamerName = events.livers[0]['name'],
 				streamerIconUrl = events.livers[0]['avatar'],
 				streamerColor = events.livers[0]['color'],
 				streamUrl = events.url,
-				title = events.name,
+				title = youtubeData['title'],
 				thumbnail = events.thumbnail,
 				startTime = events.start_date,
 				endTime = events.end_date,
 				isNowStream = isStreaming,
 				startEpoch = start.timestamp(),
+				embed = youtubeData['embed'],
 				# endEpoch = endEpoch,
 				org = 'ichikara'
 			)
@@ -333,17 +344,19 @@ class Wrapper:
 			end += timedelta(hours=2)# hololiveは終了時間書いてないので、適当に2時間にしてる
 			start = datetime.fromisoformat(events.streamStartTime)
 
+			youtubeData = self.getStreamTitleFromURL(events.streamUrl)
 			ev = CommonScheduleFormat(
 				streamerName = events.streamerName,
 				streamerIconUrl = events.streamerIconUrl,
 				streamerColor = events.streamerColor,
 				streamUrl = events.streamUrl,
-				title = self.getStreamTitleFromURL(events.streamUrl),
+				title = youtubeData['title'],
 				thumbnail = events.streamThumbnailUrl,
 				startTime = events.streamStartTime,
 				endTime = end.isoformat(),
 				isNowStream = events.isNowStreaming,
 				startEpoch = start.timestamp(),
+				embed = youtubeData['embed'],
 				# endEpoch = endEpoch,
 				org = 'hololive'
 			)
