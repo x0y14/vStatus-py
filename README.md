@@ -4,8 +4,8 @@
 ## ゲリラ配信、HPに記載されてない、twitterでの告知等は、対応していません。
 ## [いつから.link](https://www.itsukaralink.jp/, "いつから.link"), [ホロジュール](https://schedule.hololive.tv/, "ホロジュール")から取得したデータを時系列にまとめて配信しています。
 GET: https[://]vstate-x0y14-dev[.]cf  
-* /api/schedule/[past|now|future]/:int 
+* /api/schedule/[past|now|future]/?count=n 
 ->[{}, {}, {}, ...]   
-最後のintなかったら入ってるもの全部流れてくるのででかい  
+最後のcountなかったら入ってるもの全部流れてくるのででかい  
 * /api/schedule/all  
 ->{"past": [...], "new": [...], "future": [...]}
